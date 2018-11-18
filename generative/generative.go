@@ -1,7 +1,6 @@
 package generative
 
 import (
-	"fmt"
 	"github.com/anthonynsimon/bild/adjust"
 	"github.com/anthonynsimon/bild/blend"
 	"github.com/anthonynsimon/bild/effect"
@@ -107,7 +106,6 @@ func PrimitivePicture(img image.Image) image.Image {
 		// 5 = rotated rectangles,
 		// 128 = default alpha,
 		// 0 = default repeat
-		fmt.Print(".")
 		model.Step(primitive.ShapeType(5), 128, 0)
 	}
 

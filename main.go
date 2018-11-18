@@ -2,33 +2,59 @@ package main
 
 import (
 	"GenArt/generative"
-	"flag"
+	"GenArt/scrape"
+	"github.com/azer/go-flickr"
+	"github.com/jasonlvhit/gocron"
 	"github.com/sirupsen/logrus"
-	"image"
-	"log"
-	"net/http"
+	"math/rand"
+	"os"
 )
 
 func main() {
-	img, err := generative.OpenImage("images/jpeg.jpg")
-	if err != nil {
-		log.Fatal(err)
+
+	client := flickr.Client{
+		Key: os.Getenv("FLICKR"),
 	}
 
-	generateImage(img, err)
+	// Do jobs with params
+	gocron.Every(1).Second().Do(scrapeFlickr, client)
+	gocron.Every(1).Second().Do(generateImage)
 
-	port := flag.String("p", "8100", "port to serve on")
-	directory := flag.String("d", ".", "the directory of static file to host")
-	flag.Parse()
+	// function Start start all the pending jobs
+	<-gocron.Start()
 
-	http.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("./images"))))
-
-	log.Printf("Serving %s on HTTP port: %s\n", *directory, *port)
-	log.Fatal(http.ListenAndServe(":"+*port, nil))
+	//port := flag.String("p", "8100", "port to serve on")
+	//directory := flag.String("d", ".", "the directory of static file to host")
+	//flag.Parse()
+	//
+	//http.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("./images"))))
+	//
+	//log.Printf("Serving %s on HTTP port: %s\n", *directory, *port)
+	//log.Fatal(http.ListenAndServe(":"+*port, nil))
 
 }
 
-func generateImage(img image.Image, err error) {
+func scrapeFlickr(client flickr.Client) {
+	ids, err := scrape.GetImagesIds(client, "trees")
+	if err != nil {
+		logrus.Error("unable to get image IDs ", err.Error())
+	}
+	url, err := scrape.GetImageUrl(client, ids[rand.Intn(len(ids))])
+	if err != nil {
+		logrus.Error("unable to get image url ", err.Error())
+	}
+	if url != "" {
+		scrape.SaveImage(url)
+	}
+}
+
+func generateImage() {
+
+	img, err := generative.OpenImage(scrape.StoreImage)
+	if err != nil {
+		logrus.Error("unable to open image")
+	}
+
 	// Crop attempts to find the best crop of img based on the given width and height values.
 	img, err = generative.Crop(img, 1000, 1000)
 	if err != nil {
