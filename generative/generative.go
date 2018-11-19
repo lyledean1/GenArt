@@ -8,6 +8,7 @@ import (
 	"github.com/artyom/smartcrop"
 	"github.com/fogleman/primitive/primitive"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"image"
 	"image/jpeg"
 	"math/rand"
@@ -16,6 +17,13 @@ import (
 	"runtime"
 	"time"
 )
+
+const StoreImage = "images/jpeg.jpg"
+const Cropped = "images/cropped.jpg"
+const Saturated = "images/saturated.jpg"
+const Multiplied = "images/multiplied.jpg"
+const Sharpended = "images/sharpened.jpg"
+const Primitive = "images/primitive.jpg"
 
 //openImage imports an image from a given path.
 func OpenImage(path string) (image.Image, error) {
@@ -110,4 +118,47 @@ func PrimitivePicture(img image.Image) image.Image {
 	}
 
 	return model.Context.Image()
+}
+
+func GenerateImage() {
+
+	logrus.Info("generating new image")
+	img, err := OpenImage(StoreImage)
+	if err != nil {
+		logrus.Error("unable to open image")
+	}
+
+	// Crop attempts to find the best crop of img based on the given width and height values.
+	img, err = Crop(img, 1000, 1000)
+	if err != nil {
+		logrus.Error("unable to crop image " + err.Error())
+	}
+	err = SaveImage(img, ".", Cropped)
+	if err != nil {
+		logrus.Error("unable to save mage " + err.Error())
+	}
+	img, err = OpenImage(Cropped)
+	if err != nil {
+		logrus.Error("unable to open cropped image " + err.Error())
+	}
+	sat := Saturate(img)
+	err = SaveImage(sat, ".", Saturated)
+	if err != nil {
+		logrus.Error("unable to save saturated image " + err.Error())
+	}
+	mult := Multiply(img)
+	err = SaveImage(mult, ".", Multiplied)
+	if err != nil {
+		logrus.Error("unable to save multiplied image " + err.Error())
+	}
+	shrp := Sharpen(sat)
+	err = SaveImage(shrp, ".", Sharpended)
+	if err != nil {
+		logrus.Error("unable to save sharpened image " + err.Error())
+	}
+	pri := PrimitivePicture(sat)
+	err = SaveImage(pri, ".", Primitive)
+	if err != nil {
+		logrus.Error("unable to save primitive image " + err.Error())
+	}
 }

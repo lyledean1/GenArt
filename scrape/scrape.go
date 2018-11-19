@@ -1,18 +1,18 @@
 package scrape
 
 import (
+	"GenArt/generative"
 	"encoding/json"
 	"github.com/azer/go-flickr"
 	"github.com/sirupsen/logrus"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 )
 
-const StoreImage = "images/jpeg.jpg"
-
 // Get Image ids from specified tag
-func GetImagesIds(client flickr.Client, tag string) ([]string, error) {
+func getImagesIds(client flickr.Client, tag string) ([]string, error) {
 
 	var ids []string
 
@@ -39,7 +39,7 @@ func GetImagesIds(client flickr.Client, tag string) ([]string, error) {
 }
 
 // Get image url from photo id
-func GetImageUrl(client flickr.Client, id string) (string, error) {
+func getImageUrl(client flickr.Client, id string) (string, error) {
 
 	args := []string{"photo_id", id}
 	url, err := flickrRequest(client, args, "photos.getSizes")
@@ -86,7 +86,7 @@ func flickrRequest(client flickr.Client, args []string, method string) (map[stri
 	return generic, nil
 }
 
-func SaveImage(url string) {
+func saveImage(url string) {
 
 	response, err := http.Get(url)
 	if err != nil {
@@ -94,7 +94,9 @@ func SaveImage(url string) {
 	}
 	defer response.Body.Close()
 
-	file, err := os.Create(StoreImage)
+	os.MkdirAll("images", os.ModePerm)
+
+	file, err := os.Create(generative.StoreImage)
 	if err != nil {
 		logrus.Error("unable to save image from URL", err.Error())
 	}
@@ -103,6 +105,27 @@ func SaveImage(url string) {
 	_, err = io.Copy(file, response.Body)
 	if err != nil {
 		logrus.Error("io.Copy unable to dump the response body to the file", err.Error())
+	}
+
+}
+
+func ScrapeFlickr(client flickr.Client, tag string) {
+	logrus.Info("scraping new image")
+	ids, err := getImagesIds(client, tag)
+	if err != nil {
+		logrus.Error("unable to get image IDs ", err.Error())
+	}
+
+	if len(ids) > 0 {
+
+		url, err := getImageUrl(client, ids[rand.Intn(len(ids))])
+		if err != nil {
+			logrus.Error("unable to get image url ", err.Error())
+		}
+		if url != "" {
+			saveImage(url)
+		}
+
 	}
 
 }
