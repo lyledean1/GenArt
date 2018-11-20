@@ -5,7 +5,6 @@ import (
 	"github.com/anthonynsimon/bild/blend"
 	"github.com/anthonynsimon/bild/effect"
 	"github.com/anthonynsimon/bild/transform"
-	"github.com/artyom/smartcrop"
 	"github.com/fogleman/primitive/primitive"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -19,11 +18,39 @@ import (
 )
 
 const StoreImage = "images/jpeg.jpg"
-const Cropped = "images/cropped.jpg"
 const Saturated = "images/saturated.jpg"
 const Multiplied = "images/multiplied.jpg"
-const Sharpended = "images/sharpened.jpg"
+const Sharpened = "images/sharpened.jpg"
 const Primitive = "images/primitive.jpg"
+
+func GenerateImage() {
+
+	logrus.Info("generating new image")
+	img, err := OpenImage(StoreImage)
+	if err != nil {
+		logrus.Error("unable to open image")
+	}
+	sat := Saturate(img)
+	err = SaveImage(sat, ".", Saturated)
+	if err != nil {
+		logrus.Error("unable to save saturated image " + err.Error())
+	}
+	mult := Multiply(img)
+	err = SaveImage(mult, ".", Multiplied)
+	if err != nil {
+		logrus.Error("unable to save multiplied image " + err.Error())
+	}
+	shrp := Sharpen(sat)
+	err = SaveImage(shrp, ".", Sharpened)
+	if err != nil {
+		logrus.Error("unable to save sharpened image " + err.Error())
+	}
+	pri := PrimitivePicture(sat)
+	err = SaveImage(pri, ".", Primitive)
+	if err != nil {
+		logrus.Error("unable to save primitive image " + err.Error())
+	}
+}
 
 //openImage imports an image from a given path.
 func OpenImage(path string) (image.Image, error) {
@@ -59,23 +86,6 @@ func SaveImage(img image.Image, pname, fname string) error {
 // The SubImager interface exposes the SubImage method to facilitate the type conversion from `Image` to the appropriate color type.
 type SubImager interface {
 	SubImage(r image.Rectangle) image.Image
-}
-
-// `crop` auto-crops the image in-place.
-func Crop(img image.Image, width, height int) (image.Image, error) {
-
-	rect, err := smartcrop.Crop(img, width, height)
-	if err != nil {
-		return nil, errors.Wrap(err, "Smartcrop failed")
-	}
-
-	si, ok := (img).(SubImager)
-	if !ok {
-		return nil, errors.New("crop(): img does not support SubImage()")
-	}
-	subImg := si.SubImage(rect)
-
-	return subImg, nil
 }
 
 // Apply 50% saturation
@@ -118,47 +128,4 @@ func PrimitivePicture(img image.Image) image.Image {
 	}
 
 	return model.Context.Image()
-}
-
-func GenerateImage() {
-
-	logrus.Info("generating new image")
-	img, err := OpenImage(StoreImage)
-	if err != nil {
-		logrus.Error("unable to open image")
-	}
-
-	// Crop attempts to find the best crop of img based on the given width and height values.
-	img, err = Crop(img, 1000, 1000)
-	if err != nil {
-		logrus.Error("unable to crop image " + err.Error())
-	}
-	err = SaveImage(img, ".", Cropped)
-	if err != nil {
-		logrus.Error("unable to save mage " + err.Error())
-	}
-	img, err = OpenImage(Cropped)
-	if err != nil {
-		logrus.Error("unable to open cropped image " + err.Error())
-	}
-	sat := Saturate(img)
-	err = SaveImage(sat, ".", Saturated)
-	if err != nil {
-		logrus.Error("unable to save saturated image " + err.Error())
-	}
-	mult := Multiply(img)
-	err = SaveImage(mult, ".", Multiplied)
-	if err != nil {
-		logrus.Error("unable to save multiplied image " + err.Error())
-	}
-	shrp := Sharpen(sat)
-	err = SaveImage(shrp, ".", Sharpended)
-	if err != nil {
-		logrus.Error("unable to save sharpened image " + err.Error())
-	}
-	pri := PrimitivePicture(sat)
-	err = SaveImage(pri, ".", Primitive)
-	if err != nil {
-		logrus.Error("unable to save primitive image " + err.Error())
-	}
 }

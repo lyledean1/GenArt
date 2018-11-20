@@ -12,9 +12,15 @@ import (
 )
 
 // Get Image ids from specified tag
-func getImagesIds(client flickr.Client, tag string) ([]string, error) {
+func getImagesIds(client flickr.Client) ([]string, error) {
 
 	var ids []string
+
+	tag, err := getHotTag(client)
+	if err != nil {
+		logrus.Error("hot tag request not successful ", err.Error())
+		return ids, err
+	}
 
 	args := []string{"tags", tag}
 
@@ -22,6 +28,10 @@ func getImagesIds(client flickr.Client, tag string) ([]string, error) {
 	if err != nil {
 		logrus.Error("flickr request not successful ", err.Error())
 		return ids, err
+	}
+
+	if !checkStatus(tagResp) {
+		logrus.Debugf("status check failed - see message ->", tagResp["stat"])
 	}
 
 	photos := tagResp["photos"].(map[string]interface{})
@@ -48,6 +58,10 @@ func getImageUrl(client flickr.Client, id string) (string, error) {
 		return "", err
 	}
 
+	if !checkStatus(url) {
+		logrus.Debugf("status check failed - see message ->", url["stat"])
+	}
+
 	urlResp := url["sizes"].(map[string]interface{})
 
 	urls := urlResp["size"].([]interface{})
@@ -66,6 +80,26 @@ func getImageUrl(client flickr.Client, id string) (string, error) {
 
 }
 
+func getHotTag(client flickr.Client) (string, error) {
+	args := []string{"count", "20"}
+	hotList, err := flickrRequest(client, args, "tags.getHotList")
+	if err != nil {
+		logrus.Error("flickr request not successful ", err.Error())
+		return "", err
+	}
+
+	if !checkStatus(hotList) {
+		logrus.Debugf("status check failed - see message ->", hotList["stat"])
+	}
+
+	tags := hotList["hottags"].(map[string]interface{})
+	tag := tags["tag"].([]interface{})
+	hot := tag[rand.Intn(len(tag))].(map[string]interface{})["_content"].(string)
+
+	return hot, nil
+
+}
+
 func flickrRequest(client flickr.Client, args []string, method string) (map[string]interface{}, error) {
 
 	generic := make(map[string]interface{})
@@ -73,6 +107,7 @@ func flickrRequest(client flickr.Client, args []string, method string) (map[stri
 	resp, err := client.Request(method, flickr.Params{
 		args[0]: args[1],
 	})
+
 	if err != nil {
 		logrus.Error("flickr request not successful ", err.Error())
 		return generic, err
@@ -109,9 +144,9 @@ func saveImage(url string) {
 
 }
 
-func ScrapeFlickr(client flickr.Client, tag string) {
+func ScrapeFlickr(client flickr.Client) {
 	logrus.Info("scraping new image")
-	ids, err := getImagesIds(client, tag)
+	ids, err := getImagesIds(client)
 	if err != nil {
 		logrus.Error("unable to get image IDs ", err.Error())
 	}
@@ -126,6 +161,16 @@ func ScrapeFlickr(client flickr.Client, tag string) {
 			saveImage(url)
 		}
 
+	}
+
+}
+
+func checkStatus(resp map[string]interface{}) bool {
+
+	if resp["stat"] == "ok" {
+		return true
+	} else {
+		return false
 	}
 
 }
