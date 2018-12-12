@@ -6,7 +6,6 @@ import (
 	"flag"
 	"github.com/azer/go-flickr"
 	"github.com/jasonlvhit/gocron"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -25,15 +24,10 @@ func main() {
 	flag.Parse()
 
 	http.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("./images"))))
-	http.HandleFunc("/", NoraHandler)
 
 	log.Printf("Serving %s on HTTP port: %s\n", *directory, *port)
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
 
-}
-
-func NoraHandler(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "Nora is an amazing woman")
 }
 
 func cron(client flickr.Client) {

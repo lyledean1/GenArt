@@ -1,0 +1,16 @@
+[Unit]
+Description=gen art
+After=network.target
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=/home/$USER
+ExecStart=/home/$USER/genart
+Restart=on-abort
+
+Environment=FLICKR=$KEY
+
+
+[Install]
+WantedBy=multi-user.target
